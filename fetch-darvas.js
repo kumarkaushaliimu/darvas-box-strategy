@@ -113,6 +113,40 @@ function emaSeries(vals, p) {
     const nearHigh = high52 ? (price / high52 - 1) * 100 : null;
 
     const box = det.boxes.at(-1) || null;
+
+    // ---- Recommended-buy evaluation (hard filters + score) ----
+    const isActive = lastBuy && (!lastExit || lastBuy.date > lastExit.date);
+    const currentSL = lastSL ? lastSL.newSL : (lastBuy ? lastBuy.initialSL : null);
+    const target = box ? box.top + (box.height || 0) : null;
+    const riskPct = (currentSL != null && price) ? (price - currentSL) / price * 100 : null;
+    const upside = (target != null && price) ? (target / price - 1) * 100 : null;
+    const buyAgeDays = lastBuy ? Math.floor((Date.now() - new Date(lastBuy.date).getTime()) / 86400000) : null;
+    const volRatio = lastBuy?.volumeRatio ?? null;
+    const closeAboveTop = (price != null && box?.top != null) ? price > box.top : null;
+    // Hard filters
+    const hard = {
+      active: !!isActive,
+      fresh: buyAgeDays != null && buyAgeDays <= 14,
+      riskOk: riskPct != null && riskPct <= 12,
+      rewardOk: upside != null && riskPct != null && upside >= riskPct * 1.5,
+      volumeOk: volRatio != null && volRatio >= 1.5,
+      slopeOk: dma50SlopeUp === true,
+      above200: !!above200,
+      rsOk: rs3m != null && rs3m > 0,
+    };
+    const passHard = Object.values(hard).every(Boolean);
+    // Score (0-100) only for those passing hard filters
+    let buyScore = null;
+    if (passHard) {
+      buyScore = 0;
+      buyScore += Math.max(0, 30 - (buyAgeDays || 99) * 1.5);                // freshness up to 30
+      buyScore += Math.max(0, Math.min(25, 25 - riskPct * 1.2));            // lower risk up to 25
+      buyScore += Math.max(0, Math.min(20, (upside / Math.max(riskPct, 1)) * 8)); // reward/risk up to 20
+      buyScore += Math.max(0, Math.min(15, ((volRatio || 0) - 1.5) * 10));  // volume up to 15
+      buyScore += (closeAboveTop ? 10 : 0);                                  // holding above box top +10
+      buyScore = Math.round(Math.min(100, buyScore));
+    }
+
     results.push({
       symbol: c.symbol, name: c.name.replace(/\s+Ltd\.?$/, '').trim(), sector: c.sector,
       price, e50, e200, ret3m, rs3m, nearHigh,
@@ -121,8 +155,10 @@ function emaSeries(vals, p) {
       activeBox: box,
       lastBuy, lastSL, lastExit,
       activePosition,
-      currentSL: lastSL ? lastSL.newSL : (lastBuy ? lastBuy.initialSL : null),
-      target: box ? box.top + (box.height || 0) : null,
+      currentSL,
+      target,
+      riskPct, upside, buyAgeDays, volRatio, closeAboveTop,
+      hard, passHard, buyScore,
       signals: det.signals.slice(-12),
     });
     done++;

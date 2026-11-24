@@ -40,6 +40,9 @@ node build.js                              # → index.html
 - Expandable rows showing the full signal timeline (BUY → RAISE_SL → EXIT) and trade parameters
 - CSV export
 
+### Recommended Buys tab
+A second tab showing only stocks that pass **all 8 hard filters**: active BUY signal, signal age ≤14 days, risk ≤12%, upside ≥1.5× risk, breakout volume ≥1.5×, 50 DMA slope positive, price above 200 DMA, and RS positive vs Nifty. Each is ranked by a **Buy Score /100** (freshness 30, low risk 25, reward/risk 20, volume 15, above box top 10). Expandable rows show which filters passed and the score breakdown. Includes CSV export and a methodology panel. "Close above box top" is only a 10-point confidence bonus — not a hard filter.
+
 ## Parameters (starting values, to be backtested)
 Confirm 3 sessions · volume 1.5× · buffer 0.4% · max box height 15% · max risk 12% · 1% capital risk · no profit target · pyramiding disabled.
 
