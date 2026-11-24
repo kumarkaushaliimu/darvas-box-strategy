@@ -40,6 +40,18 @@ function ema(vals, p) {
   for (let i = p; i < vals.length; i++) e = vals[i] * k + e * (1 - k);
   return e;
 }
+function emaSeries(vals, p) {
+  if (vals.length < p) return [];
+  const k = 2 / (p + 1);
+  const out = new Array(vals.length).fill(null);
+  let e = vals.slice(0, p).reduce((a, b) => a + b, 0) / p;
+  out[p - 1] = e;
+  for (let i = p; i < vals.length; i++) {
+    e = vals[i] * k + e * (1 - k);
+    out[i] = e;
+  }
+  return out;
+}
 
 (async () => {
   console.log('Fetching NIFTY ' + INDEX + ' constituents...');
@@ -79,6 +91,11 @@ function ema(vals, p) {
     const closes = candles.map(x => x.close);
     const price = closes.at(-1);
     const e50 = ema(closes, 50), e200 = ema(closes, 200);
+    // 50 DMA slope: current EMA50 vs EMA50 from 10 sessions ago
+    const e50s = emaSeries(closes, 50);
+    const e50Prev = e50s.length > 10 ? e50s[e50s.length - 11] : null;
+    const dma50SlopePct = (e50 != null && e50Prev != null && e50Prev !== 0) ? (e50 / e50Prev - 1) * 100 : null;
+    const dma50SlopeUp = dma50SlopePct != null ? dma50SlopePct > 0 : null;
     const ret3m = closes.length > 63 ? (price / closes[closes.length - 64] - 1) * 100 : null;
     const high52 = Math.max(...candles.slice(-252).map(x => x.high));
     const det = detectBoxes(candles, { bufferPct: 0.4, volMult: 1.5, maxBoxHeightPct: 15 });
@@ -99,7 +116,7 @@ function ema(vals, p) {
     results.push({
       symbol: c.symbol, name: c.name.replace(/\s+Ltd\.?$/, '').trim(), sector: c.sector,
       price, e50, e200, ret3m, rs3m, nearHigh,
-      above200, dma50above200,
+      above200, dma50above200, dma50SlopePct, dma50SlopeUp,
       boxCount: det.boxes.length,
       activeBox: box,
       lastBuy, lastSL, lastExit,

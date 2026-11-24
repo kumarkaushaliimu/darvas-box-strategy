@@ -143,6 +143,9 @@
         <th data-key="target">Target</th>
         <th data-key="riskPct">Risk %</th>
         <th data-key="upside">Upside</th>
+        <th data-key="volRatio" title="Breakout-day volume / 20-day average">Vol Ratio</th>
+        <th data-key="closeAbove" title="Breakout close above confirmed box top">Close&gt;Top</th>
+        <th data-key="dma50SlopePct" title="50 DMA change over last 10 sessions">50 DMA Slope</th>
         <th data-key="rs3m">RS 3M</th>
         <th data-key="nearHigh">52W High</th>
         <th data-key="signalCount">Signals</th>
@@ -169,6 +172,8 @@ const stocks = DATA.stocks.map(s => {
     status: active ? 'ACTIVE' : (box.bottom != null ? 'BOX READY' : 'FORMING'),
     riskPct: (sl != null && s.price) ? (s.price - sl) / s.price * 100 : null,
     upside: (target != null && s.price) ? (target / s.price - 1) * 100 : null,
+    volRatio: s.lastBuy?.volumeRatio ?? null,
+    closeAbove: (s.lastBuy && s.lastBuy.boxTop != null) ? (s.lastBuy.price > s.lastBuy.boxTop) : null,
     signalCount: s.signals?.length || 0, active,
   };
 });
@@ -220,17 +225,20 @@ function render(){
       <td>${fmt(s.target,0)}</td>
       <td class="${s.riskPct>12?'fail':''}">${fmt(s.riskPct,1)}%</td>
       <td class="${s.upside>0?'pass':''}">${pct(s.upside,1)}</td>
+      <td class="${s.volRatio>=1.5?'pass':'fail'}">${s.volRatio!=null?s.volRatio.toFixed(2)+'×':'—'}</td>
+      <td class="${s.closeAbove===true?'pass':(s.closeAbove===false?'fail':'neutral')}">${s.closeAbove==null?'—':(s.closeAbove?'Yes':'No')}</td>
+      <td class="${s.dma50SlopeUp===true?'pass':(s.dma50SlopeUp===false?'fail':'neutral')}">${s.dma50SlopePct==null?'—':pct(s.dma50SlopePct,1)}</td>
       <td class="${s.rs3m>0?'pass':'fail'}">${pct(s.rs3m,1)}</td>
       <td>${pct(s.nearHigh,1)}</td>
       <td>${s.signalCount}</td>
     </tr>`;
-  }).join(''):'<tr><td colspan="14" class="empty">No stocks match the filters</td></tr>';
+  }).join(''):'<tr><td colspan="17" class="empty">No stocks match the filters</td></tr>';
   $$('#tbody tr[data-i]').forEach(tr=>tr.addEventListener('click',()=>{
     const nx=tr.nextElementSibling;if(nx&&nx.classList.contains('detail')){nx.remove();tr.classList.remove('open');return;}
     $$('#tbody .detail').forEach(x=>x.remove());$$('#tbody tr[data-i]').forEach(x=>x.classList.remove('open'));
     const s=out[+tr.dataset.i];tr.classList.add('open');
     const d=document.createElement('tr');d.className='detail';
-    d.innerHTML=`<td colspan="14">${detail(s)}</td>`;tr.after(d);
+    d.innerHTML=`<td colspan="17">${detail(s)}</td>`;tr.after(d);
   }));
 }
 function detail(s){
@@ -256,6 +264,9 @@ function detail(s){
       <div class="rline"><span>Target (box top + height)</span><b>₹${fmt(s.target,0)}</b></div>
       <div class="rline"><span>Risk from current price</span><b>${fmt(s.riskPct,1)}%</b></div>
       <div class="rline"><span>Upside to target</span><b>${pct(s.upside,1)}</b></div>
+      <div class="rline"><span>Volume ratio (breakout)</span><b class="${s.volRatio>=1.5?'pass':'fail'}">${s.volRatio!=null?s.volRatio.toFixed(2)+'× (min 1.5×)':'—'}</b></div>
+      <div class="rline"><span>Close above box top</span><b class="${s.closeAbove===true?'pass':'fail'}">${s.closeAbove==null?'—':(s.closeAbove?'Yes ✓':'No')}</b></div>
+      <div class="rline"><span>50 DMA slope (10 sessions)</span><b class="${s.dma50SlopeUp===true?'pass':(s.dma50SlopeUp===false?'fail':'')}">${s.dma50SlopePct==null?'—':pct(s.dma50SlopePct,1)+(s.dma50SlopeUp?' ↑':' ↓')}</b></div>
       <div class="rline"><span>Trailing stop raised</span><b>${s.lastSL?'₹'+fmt(s.lastSL.newSL,0):'No'}</b></div>
     </div>
     <div class="dcol"><h4>Signal timeline (latest)</h4>${sigs}
@@ -274,13 +285,13 @@ function calc(){
 }
 $('#calcBtn').addEventListener('click',calc);calc();
 $('#export').addEventListener('click',()=>{
-  const cols=['name','symbol','sector','price','status','boxTop','boxBottom','heightPct','currentSL','target','riskPct','upside','rs3m','signalCount'];
+  const cols=['name','symbol','sector','price','status','boxTop','boxBottom','heightPct','currentSL','target','riskPct','upside','volRatio','closeAbove','dma50SlopePct','rs3m','signalCount'];
   const rows=[cols.join(',')];for(const s of stocks)rows.push(cols.map(c=>{let v=s[c];if(v==null)return'';if(typeof v==='string')return'"'+v.replace(/"/g,'""')+'"';return v;}).join(','));
   const b=new Blob([rows.join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='darvas_scan_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 });
 $('#method').innerHTML=`<h3>Darvas Box — system rules (from the reference guide)</h3><div class="grid">
   <div class="box"><h4>1 · Box identification</h4><ul><li>Candidate high confirmed after 3 sessions with no higher high</li><li>Candidate low confirmed after 3 sessions with no lower low</li><li>Top and bottom confirmed at different times (no look-ahead)</li></ul></div>
-  <div class="box"><h4>2 · Entry</h4><ul><li>Daily close above confirmed box top</li><li>Volume ≥ 1.5× 20-day average</li><li>Prefer above 50 & 200 DMA, near 52W high</li></ul></div>
+  <div class="box"><h4>2 · Entry</h4><ul><li>Daily close above confirmed box top</li><li>Volume ≥ 1.5× 20-day average</li><li>50 DMA slope positive</li><li>Prefer above 50 & 200 DMA, near 52W high</li></ul></div>
   <div class="box"><h4>3 · Stop &amp; risk</h4><ul><li>Initial SL = box bottom − 0.4% buffer</li><li>Max box height 15%, max risk 12%</li><li>Position size = 1% capital / risk per share</li></ul></div>
   <div class="box"><h4>4 · Trailing &amp; exit</h4><ul><li>Move stop only after a new HIGHER box confirms its bottom</li><li>Never lower the stop</li><li>Exit when stop is hit; no averaging down</li></ul></div>
 </div><p>These are the recommended starting parameters. Backtest pure Darvas, then +volume, +DMA, +RS, +ATR buffer, ghost-box and controlled pyramiding independently before using live capital.</p>`;
