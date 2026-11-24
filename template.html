@@ -77,6 +77,21 @@
   .calcout b{display:block;font-size:19px;color:var(--green);margin-top:3px;font-variant-numeric:tabular-nums}
   .empty{padding:40px;text-align:center;color:var(--dim)}
   .disc{margin-top:18px;padding:11px 14px;border:1px solid var(--line);border-radius:9px;background:rgba(255,107,107,.04);font-size:10.8px;color:#a98b8b}
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{appearance:none;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:13px;padding:10px 16px;border-radius:9px 9px 0 0;cursor:pointer;position:relative;top:1px}
+  .tab:hover{color:var(--txt)}
+  .tab.active{color:var(--txt);background:var(--panel);border-color:var(--line)}
+  .tab.active::after{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:var(--tc,var(--cyan))}
+  .tab .badge{font-size:10px;background:var(--line2);color:var(--muted);padding:1px 7px;border-radius:9px;margin-left:5px}
+  .tab.active .badge{color:var(--txt)}
+  .secview{display:none}.secview.active{display:block}
+  .filterbox{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .fchip{font-size:11px;padding:5px 10px;border-radius:7px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+  .fchip.pass{background:rgba(47,209,140,.10);border-color:rgba(47,209,140,.25);color:var(--green)}
+  .fchip b{color:var(--txt)}
+  .macrohead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .macrohead h2{font-size:17px;font-weight:650}
   @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.dinner{grid-template-columns:1fr}}
 </style>
 </head>
@@ -110,6 +125,12 @@
     </div>
   </div>
 
+  <div class="tabs">
+    <button class="tab active" data-sec="all" style="--tc:var(--cyan)">📊 All Stocks <span class="badge" id="badgeAll">0</span></button>
+    <button class="tab" data-sec="rec" style="--tc:var(--green)">✅ Recommended Buys <span class="badge" id="badgeRec">0</span></button>
+  </div>
+
+  <div id="sec-all" class="secview active">
   <div class="toolbar">
     <div class="search"><input id="search" placeholder="Search company or symbol…"></div>
     <select id="sector"><option value="">All sectors</option></select>
@@ -155,6 +176,54 @@
   </div>
 
   <div class="method" id="method"></div>
+  </div><!-- /sec-all -->
+
+  <!-- RECOMMENDED BUYS -->
+  <div id="sec-rec" class="secview">
+    <div class="macrohead">
+      <div><h2>Recommended Buys</h2><div class="sub">Stocks passing ALL hard filters below, ranked by a 0–100 buy score. These are rule-based candidates — verify before trading.</div></div>
+    </div>
+    <div class="filterbox" id="hardFilters"></div>
+    <div class="kpis" id="recKpis" style="grid-template-columns:repeat(4,1fr)"></div>
+    <div class="toolbar">
+      <div class="search"><input id="recsearch" placeholder="Search company or symbol…"></div>
+      <select id="recsector"><option value="">All sectors</option></select>
+      <div class="pill" id="recfilter">
+        <button class="on" data-f="all">All recommended</button>
+        <button data-f="80">Score ≥80</button>
+        <button data-f="above">Above box top</button>
+      </div>
+      <button class="btn" id="recexport">⬇ Export CSV</button>
+      <span class="count" id="reccount"></span>
+    </div>
+    <div class="tablecard">
+      <div class="legend">
+        <span><i style="background:var(--green)"></i> Buy score (0–100) — higher is better</span>
+        <span>Hard filters all pass: active · fresh ≤14d · risk ≤12% · reward ≥1.5× · volume ≥1.5× · 50 DMA rising · above 200 DMA · RS positive</span>
+        <span>Click a row to see why it passed and the trade setup</span>
+      </div>
+      <div class="scroll"><table id="rectbl">
+        <thead><tr>
+          <th class="l" data-key="name" style="width:180px">Company</th>
+          <th class="l" data-key="sector" style="width:120px">Sector</th>
+          <th data-key="buyScore">Buy Score</th>
+          <th data-key="price">Price</th>
+          <th data-key="buyAgeDays">Signal Age</th>
+          <th data-key="riskPct">Risk %</th>
+          <th data-key="upside">Upside</th>
+          <th data-key="rr">R:R</th>
+          <th data-key="volRatio">Vol Ratio</th>
+          <th data-key="slopePct">50 DMA Slope</th>
+          <th data-key="closeAbove">Close&gt;Top</th>
+          <th data-key="currentSL">Stop</th>
+          <th data-key="target">Target</th>
+        </tr></thead>
+        <tbody id="recbody"></tbody>
+      </table></div>
+    </div>
+    <div class="method" id="recmethod"></div>
+  </div><!-- /sec-rec -->
+
   <div class="disc"><b>Disclaimer:</b> For research and education only — not investment advice. Darvas boxes are detected from delayed daily OHLC data; signals are historical and not guaranteed. Backtest with realistic costs, slippage and gap risk before trading.</div>
 </div>
 
@@ -295,6 +364,111 @@ $('#method').innerHTML=`<h3>Darvas Box — system rules (from the reference guid
   <div class="box"><h4>3 · Stop &amp; risk</h4><ul><li>Initial SL = box bottom − 0.4% buffer</li><li>Max box height 15%, max risk 12%</li><li>Position size = 1% capital / risk per share</li></ul></div>
   <div class="box"><h4>4 · Trailing &amp; exit</h4><ul><li>Move stop only after a new HIGHER box confirms its bottom</li><li>Never lower the stop</li><li>Exit when stop is hit; no averaging down</li></ul></div>
 </div><p>These are the recommended starting parameters. Backtest pure Darvas, then +volume, +DMA, +RS, +ATR buffer, ghost-box and controlled pyramiding independently before using live capital.</p>`;
+
+/* ---------- Recommended Buys ---------- */
+const recStocks = stocks.filter(s => s.passHard).sort((a,b) => (b.buyScore||0)-(a.buyScore||0));
+$('#badgeAll').textContent = stocks.length;
+$('#badgeRec').textContent = recStocks.length;
+
+$$('.tab').forEach(b => b.addEventListener('click', () => {
+  $$('.tab').forEach(x=>x.classList.remove('active'));
+  $$('.secview').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  $('#sec-'+b.dataset.sec).classList.add('active');
+}));
+
+const HARD_LABELS = {
+  active:'Active BUY', fresh:'Signal ≤14d', riskOk:'Risk ≤12%', rewardOk:'Reward ≥1.5×',
+  volumeOk:'Volume ≥1.5×', slopeOk:'50 DMA rising', above200:'Above 200 DMA', rsOk:'RS positive'
+};
+$('#hardFilters').innerHTML = Object.entries(HARD_LABELS).map(([k,v])=>`<span class="fchip pass">✓ <b>${v}</b></span>`).join('');
+$('#recKpis').innerHTML = [
+  {l:'Recommended',v:recStocks.length,n:'pass all filters',k:'var(--green)'},
+  {l:'Score ≥80',v:recStocks.filter(s=>s.buyScore>=80).length,n:'top ranked',k:'var(--cyan)'},
+  {l:'Above box top',v:recStocks.filter(s=>s.closeAbove).length,n:'breakout holding',k:'var(--amber)'},
+  {l:'Avg score',v:recStocks.length?(recStocks.reduce((a,s)=>a+s.buyScore,0)/recStocks.length).toFixed(0):'—',n:'of 100',k:'var(--violet)'},
+].map(x=>`<div class="kpi" style="--k:${x.k}"><div class="l">${x.l}</div><div class="v">${x.v}</div><div class="n">${x.n}</div></div>`).join('');
+
+const recsectors=[...new Set(recStocks.map(s=>s.sector).filter(Boolean))].sort();
+$('#recsector').insertAdjacentHTML('beforeend', recsectors.map(s=>`<option>${s}</option>`).join(''));
+const rstate={q:'',sector:'',filter:'all',key:'buyScore',dir:-1};
+$('#recsearch').addEventListener('input',e=>{rstate.q=e.target.value.trim().toLowerCase();renderRec();});
+$('#recsector').addEventListener('change',e=>{rstate.sector=e.target.value;renderRec();});
+$('#recfilter').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#recfilter').children].forEach(x=>x.classList.remove('on'));b.classList.add('on');rstate.filter=b.dataset.f;renderRec();});
+$$('#rectbl thead th[data-key]').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.key;if(rstate.key===k)rstate.dir*=-1;else{rstate.key=k;rstate.dir=-1;}renderRec();}));
+
+function renderRec(){
+  let out=recStocks.filter(s=>(!rstate.q||(s.name||'').toLowerCase().includes(rstate.q)||(s.symbol||'').toLowerCase().includes(rstate.q))&&(!rstate.sector||s.sector===rstate.sector));
+  if(rstate.filter==='80')out=out.filter(s=>s.buyScore>=80);
+  else if(rstate.filter==='above')out=out.filter(s=>s.closeAbove);
+  const k=rstate.key,dir=rstate.dir;
+  out.sort((a,b)=>{let av=a[k],bv=b[k];if(k==='name'||k==='sector'){return (av||'').localeCompare(bv||'')*dir;}if(k==='closeAbove'){av=av===true?1:0;bv=bv===true?1:0;}if(av==null)av=-Infinity;if(bv==null)bv=-Infinity;return (av-bv)*dir;});
+  $('#reccount').textContent=out.length+' of '+recStocks.length+' stocks';
+  $('#recbody').innerHTML=out.length?out.map((s,i)=>{
+    const rr=s.riskPct>0?(s.upside/s.riskPct):null;
+    return `<tr data-i="${i}">
+      <td class="l"><div class="cname">${s.name}</div><div class="csym">${s.symbol}</div></td>
+      <td class="l"><div class="sect" title="${s.sector}">${s.sector}</div></td>
+      <td><b style="color:${s.buyScore>=80?'var(--green)':(s.buyScore>=60?'var(--amber)':'var(--muted)')};font-size:14px">${s.buyScore}</b></td>
+      <td>${fmt(s.price,0)}</td>
+      <td>${s.buyAgeDays}d</td>
+      <td class="${s.riskPct<=12?'pass':'fail'}">${fmt(s.riskPct,1)}%</td>
+      <td class="pass">${pct(s.upside,1)}</td>
+      <td>${rr!=null?rr.toFixed(1)+'×':'—'}</td>
+      <td class="pass">${s.volRatio?.toFixed(2)}×</td>
+      <td class="pass">${pct(s.dma50SlopePct,1)}</td>
+      <td class="${s.closeAbove?'pass':'fail'}">${s.closeAbove?'Yes':'No'}</td>
+      <td>${fmt(s.currentSL,0)}</td>
+      <td>${fmt(s.target,0)}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="13" class="empty">No stocks pass the filters</td></tr>';
+  $$('#recbody tr[data-i]').forEach(tr=>tr.addEventListener('click',()=>{
+    const nx=tr.nextElementSibling;if(nx&&nx.classList.contains('detail')){nx.remove();tr.classList.remove('open');return;}
+    $$('#recbody .detail').forEach(x=>x.remove());$$('#recbody tr[data-i]').forEach(x=>x.classList.remove('open'));
+    const s=out[+tr.dataset.i];tr.classList.add('open');
+    const d=document.createElement('tr');d.className='detail';
+    const why=Object.entries(HARD_LABELS).map(([k,v])=>`<div class="rline"><span>${v}</span><b class="${s.hard[k]?'pass':'fail'}">${s.hard[k]?'✓ PASS':'✗ FAIL'}</b></div>`).join('');
+    const sc=[
+      ['Signal freshness',Math.max(0,30-(s.buyAgeDays||99)*1.5),30],
+      ['Low risk',Math.max(0,Math.min(25,25-s.riskPct*1.2)),25],
+      ['Reward / risk',Math.max(0,Math.min(20,(s.upside/Math.max(s.riskPct,1))*8)),20],
+      ['Volume strength',Math.max(0,Math.min(15,((s.volRatio||0)-1.5)*10)),15],
+      ['Above box top',s.closeAbove?10:0,10],
+    ].map(([n,v,m])=>`<div class="rline"><span>${n}</span><b>${v.toFixed(0)} / ${m}</b></div>`).join('');
+    d.innerHTML=`<td colspan="13"><div class="dinner">
+      <div class="dcol"><h4>Why it passed (all hard filters)</h4>${why}</div>
+      <div class="dcol"><h4>Buy score breakdown (${s.buyScore}/100)</h4>${sc}</div>
+      <div class="dcol"><h4>Trade setup</h4>
+        <div class="rline"><span>Entry (BUY signal)</span><b>₹${fmt(s.lastBuy?.price,0)} on ${s.lastBuy?.date}</b></div>
+        <div class="rline"><span>Current price</span><b>₹${fmt(s.price,0)}</b></div>
+        <div class="rline"><span>Box top / bottom</span><b>₹${fmt(s.activeBox?.top,0)} / ₹${fmt(s.activeBox?.bottom,0)}</b></div>
+        <div class="rline"><span>Stop loss</span><b>₹${fmt(s.currentSL,0)}</b></div>
+        <div class="rline"><span>Target (measured move)</span><b>₹${fmt(s.target,0)}</b></div>
+        <div class="rline"><span>Volume ratio</span><b>${s.volRatio?.toFixed(2)}×</b></div>
+        <div class="rline"><span>50 DMA slope</span><b>${pct(s.dma50SlopePct,1)}</b></div>
+        <div class="rline"><span>RS 3M vs Nifty</span><b>${pct(s.rs3m,1)}</b></div>
+      </div>
+    </div></td>`;tr.after(d);
+  }));
+}
+$('#recexport').addEventListener('click',()=>{
+  const cols=['name','symbol','sector','buyScore','price','buyAgeDays','riskPct','upside','volRatio','dma50SlopePct','closeAbove','currentSL','target'];
+  const rows=[cols.join(',')];for(const s of recStocks)rows.push(cols.map(c=>{let v=s[c];if(v==null)return'';if(typeof v==='string')return'"'+v.replace(/"/g,'""')+'"';return v;}).join(','));
+  const b=new Blob([rows.join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='darvas_recommended_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+});
+$('#recmethod').innerHTML=`<h3>How recommendations are selected</h3><div class="grid">
+  <div class="box"><h4>Hard filters (must ALL pass)</h4><ul>
+    <li>Active BUY signal, no EXIT<b>required</b></li><li>Signal age ≤ 14 days<b>fresh</b></li>
+    <li>Risk from price to stop ≤ 12%<b>required</b></li><li>Upside ≥ 1.5× risk<b>required</b></li>
+    <li>Breakout volume ≥ 1.5× avg<b>required</b></li><li>50 DMA slope positive<b>required</b></li>
+    <li>Price above 200 DMA<b>required</b></li><li>RS 3M positive vs Nifty<b>required</b></li>
+  </ul></div>
+  <div class="box"><h4>Buy score (100 pts)</h4><ul>
+    <li>Signal freshness<b>30</b></li><li>Low risk<b>25</b></li><li>Reward/risk ratio<b>20</b></li>
+    <li>Volume strength<b>15</b></li><li>Latest close above box top<b>10</b></li>
+  </ul></div>
+</div><p>These are rule-based candidates from delayed daily data, not recommendations to buy. Verify the current price, recompute risk at your actual entry, and apply your own position sizing before trading. "Close above box top" is only a 10-point confidence bonus — a stock below it can still be valid if it is consolidating into a new higher box and its stop is intact.</p>`;
+renderRec();
 
 render();
 </script>
