@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Darvas Box Scanner — NIFTY Universe</title>
+<style>
+  :root{
+    --bg:#070b12;--panel:#0e1624;--panel2:#121c2c;--line:#1c2839;--line2:#24344a;
+    --txt:#e6edf6;--muted:#8b9bb1;--dim:#64748b;--green:#2fd18c;--red:#ff6b6b;
+    --amber:#f5b544;--cyan:#4cc9f0;--violet:#a78bfa;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(900px 500px at 12% -8%,rgba(76,201,240,.10),transparent 60%),radial-gradient(800px 500px at 88% -12%,rgba(167,139,250,.10),transparent 60%),var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1700px;margin:0 auto;padding:24px 20px 60px}
+  a{color:var(--cyan);text-decoration:none}
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(145deg,#123b52,#0b2233);border:1px solid #1d4c66;display:grid;place-items:center;font-size:22px}
+  h1{font-size:22px;letter-spacing:-.3px;font-weight:650}h1 span{color:var(--cyan)}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+  .kpi{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--k,var(--cyan))}
+  .kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .kpi .v{font-size:21px;font-weight:650;margin-top:5px;font-variant-numeric:tabular-nums}
+  .kpi .n{font-size:11px;color:var(--dim)}
+  .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+  .search{flex:1;min-width:220px;position:relative}
+  .search input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px 9px 34px;color:var(--txt);font:inherit;font-size:13px;outline:none}
+  .search input:focus{border-color:var(--cyan)}
+  .search::before{content:"⌕";position:absolute;left:12px;top:6px;color:var(--dim);font-size:18px}
+  select,button.btn{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;color:var(--txt);font:inherit;font-size:12.5px;outline:none;cursor:pointer}
+  .pill{display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .pill button{appearance:none;border:none;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:6px 11px;border-radius:6px;cursor:pointer}
+  .pill button.on{background:var(--line2);color:var(--txt)}
+  .count{margin-left:auto;color:var(--dim);font-size:12px}
+  .tablecard{background:var(--panel);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px}
+  .scroll{overflow:auto;max-height:72vh}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1300px;font-size:12.5px}
+  thead th{position:sticky;top:0;background:var(--panel2);z-index:2;text-align:right;padding:10px 11px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;white-space:nowrap;border-bottom:1px solid var(--line2);cursor:pointer;user-select:none}
+  thead th.l{text-align:left}
+  tbody td{padding:9px 11px;text-align:right;border-bottom:1px solid rgba(28,40,57,.55);font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody td.l{text-align:left}
+  tbody tr{cursor:pointer}tbody tr:hover{background:rgba(255,255,255,.025)}
+  tbody tr.open{background:rgba(76,201,240,.05)}
+  .cname{font-weight:600}.csym{font-size:10.5px;color:var(--dim);margin-top:1px}
+  .sect{font-size:11px;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis}
+  .tag{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--line2);color:var(--muted)}
+  .tag.g{background:var(--green-dim,rgba(47,209,140,.12));color:var(--green)}
+  .tag.r{background:rgba(255,107,107,.12);color:var(--red)}
+  .tag.a{background:rgba(245,181,68,.13);color:var(--amber)}
+  .pass{color:var(--green)}.fail{color:var(--red)}
+  .detail td{padding:0;background:var(--bg2)}
+  .dinner{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+  .dcol h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .rline{padding:5px 0;font-size:12px;border-bottom:1px dashed rgba(36,52,74,.5);display:flex;justify-content:space-between;gap:10px}
+  .rline b{color:var(--txt)}
+  .bar{height:7px;background:var(--line2);border-radius:4px;overflow:hidden;margin:3px 0}
+  .bar i{display:block;height:100%;border-radius:4px}
+  .method{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:16px}
+  .method h3{font-size:14px;margin-bottom:12px}
+  .method .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  .method .box{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:13px}
+  .method .box h4{font-size:12px;color:var(--cyan);margin-bottom:8px}
+  .method li{list-style:none;font-size:11.5px;color:var(--muted);padding:3px 0;display:flex;justify-content:space-between}
+  .method li b{color:var(--txt)}
+  .calc{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-bottom:16px}
+  .calc h3{font-size:14px;margin-bottom:12px}
+  .calcrow{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  .calc label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .calc input,.calc select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;color:var(--txt);font:inherit;font-size:13px;width:140px}
+  .calcout{display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .calcout div{font-size:12px;color:var(--muted)}
+  .calcout b{display:block;font-size:19px;color:var(--green);margin-top:3px;font-variant-numeric:tabular-nums}
+  .empty{padding:40px;text-align:center;color:var(--dim)}
+  .disc{margin-top:18px;padding:11px 14px;border:1px solid var(--line);border-radius:9px;background:rgba(255,107,107,.04);font-size:10.8px;color:#a98b8b}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.dinner{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="logo">📦</div><div>
+      <h1><span>Darvas Box</span> Scanner</h1>
+      <div class="sub">Chronological box detection · breakout signals · trailing stops · <b id="asOf"></b></div>
+    </div></div>
+    <div class="sub" id="genTime"></div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="calc">
+    <h3>Position sizing calculator (1% capital risk)</h3>
+    <div class="calcrow">
+      <div><label>Trading capital (₹)</label><input id="capital" type="number" value="500000"></div>
+      <div><label>Risk per trade (%)</label><input id="riskpct" type="number" value="1" step="0.1"></div>
+      <div><label>Entry price (₹)</label><input id="entry" type="number" value="504"></div>
+      <div><label>Stop loss (₹)</label><input id="sl" type="number" value="472"></div>
+      <button class="btn" id="calcBtn">Calculate</button>
+    </div>
+    <div class="calcout">
+      <div>Risk per share<b id="oRisk">—</b></div>
+      <div>Max loss allowed<b id="oMax">—</b></div>
+      <div>Quantity (shares)<b id="oQty">—</b></div>
+      <div>Investment amount<b id="oInv">—</b></div>
+      <div>Risk %<b id="oPct">—</b></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search"><input id="search" placeholder="Search company or symbol…"></div>
+    <select id="sector"><option value="">All sectors</option></select>
+    <div class="pill" id="filter">
+      <button class="on" data-f="all">All</button>
+      <button data-f="active">Active breakout</button>
+      <button data-f="box">Confirmed box</button>
+      <button data-f="trend">Trend-aligned</button>
+      <button data-f="recent">Recent signals</button>
+    </div>
+    <button class="btn" id="export">⬇ Export CSV</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="tablecard">
+    <div class="legend">
+      <span><i style="background:var(--green)"></i> Active breakout / position</span>
+      <span><i style="background:var(--amber)"></i> Confirmed box, waiting</span>
+      <span>Click a row for full box sequence &amp; signal timeline</span>
+    </div>
+    <div class="scroll"><table id="tbl">
+      <thead><tr>
+        <th class="l" data-key="name" style="width:190px">Company</th>
+        <th class="l" data-key="sector" style="width:120px">Sector</th>
+        <th data-key="price">Price</th>
+        <th class="l" data-key="status">Status</th>
+        <th data-key="boxTop">Box Top</th>
+        <th data-key="boxBottom">Box Bottom</th>
+        <th data-key="heightPct">Box %</th>
+        <th data-key="currentSL">Stop Loss</th>
+        <th data-key="target">Target</th>
+        <th data-key="riskPct">Risk %</th>
+        <th data-key="upside">Upside</th>
+        <th data-key="rs3m">RS 3M</th>
+        <th data-key="nearHigh">52W High</th>
+        <th data-key="signalCount">Signals</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="method" id="method"></div>
+  <div class="disc"><b>Disclaimer:</b> For research and education only — not investment advice. Darvas boxes are detected from delayed daily OHLC data; signals are historical and not guaranteed. Backtest with realistic costs, slippage and gap risk before trading.</div>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+const stocks = DATA.stocks.map(s => {
+  const box = s.activeBox || {};
+  const lastSig = s.signals?.at(-1);
+  const active = s.lastBuy && (!s.lastExit || s.lastBuy.date > s.lastExit.date);
+  const sl = s.currentSL;
+  const target = s.target;
+  return { ...s,
+    boxTop: box.top ?? null, boxBottom: box.bottom ?? null, heightPct: box.heightPct ?? null,
+    boxDate: box.confirmDate ?? null,
+    status: active ? 'ACTIVE' : (box.bottom != null ? 'BOX READY' : 'FORMING'),
+    riskPct: (sl != null && s.price) ? (s.price - sl) / s.price * 100 : null,
+    upside: (target != null && s.price) ? (target / s.price - 1) * 100 : null,
+    signalCount: s.signals?.length || 0, active,
+  };
+});
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const fmt=(v,d=1)=>v==null?'—':Number(v).toFixed(d);
+const pct=(v,d=1)=>v==null?'—':(v>0?'+':'')+Number(v).toFixed(d)+'%';
+$('#asOf').textContent = new Date(DATA.generatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+$('#genTime').textContent = 'Generated ' + new Date(DATA.generatedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) + ' IST';
+
+const active=stocks.filter(s=>s.active).length, ready=stocks.filter(s=>s.status==='BOX READY').length;
+const kpis=[
+  {l:'Universe',v:stocks.length,n:'NIFTY '+(DATA.index||250),k:'var(--cyan)'},
+  {l:'Active breakouts',v:active,n:'position open',k:'var(--green)'},
+  {l:'Boxes confirmed',v:ready,n:'waiting for breakout',k:'var(--amber)'},
+  {l:'With trailing SL',v:stocks.filter(s=>s.lastSL).length,n:'stops raised',k:'var(--violet)'},
+  {l:'Trend aligned',v:stocks.filter(s=>s.above200&&s.dma50above200).length,n:'above 50 & 200 DMA',k:'var(--cyan)'},
+  {l:'Benchmark 3M',v:pct(DATA.benchmark3m),n:'NIFTY 500',k:'var(--green)'},
+];
+$('#kpis').innerHTML=kpis.map(k=>`<div class="kpi" style="--k:${k.k}"><div class="l">${k.l}</div><div class="v">${k.v}</div><div class="n">${k.n}</div></div>`).join('');
+
+const sectors=[...new Set(stocks.map(s=>s.sector).filter(Boolean))].sort();
+$('#sector').insertAdjacentHTML('beforeend',sectors.map(s=>`<option>${s}</option>`).join(''));
+const state={q:'',sector:'',filter:'all',key:'price',dir:-1};
+$('#search').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();render();});
+$('#sector').addEventListener('change',e=>{state.sector=e.target.value;render();});
+$('#filter').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#filter').children].forEach(x=>x.classList.remove('on'));b.classList.add('on');state.filter=b.dataset.f;render();});
+$$('#tbl thead th[data-key]').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.key;if(state.key===k)state.dir*=-1;else{state.key=k;state.dir=-1;}render();}));
+
+function render(){
+  let out=stocks.filter(s=>(!state.q||(s.name||'').toLowerCase().includes(state.q)||(s.symbol||'').toLowerCase().includes(state.q))&&(!state.sector||s.sector===state.sector));
+  if(state.filter==='active')out=out.filter(s=>s.active);
+  else if(state.filter==='box')out=out.filter(s=>s.status==='BOX READY');
+  else if(state.filter==='trend')out=out.filter(s=>s.above200&&s.dma50above200);
+  else if(state.filter==='recent')out=out.filter(s=>s.signalCount>0);
+  const k=state.key,dir=state.dir;
+  out.sort((a,b)=>{let av=a[k],bv=b[k];if(k==='name'||k==='sector'||k==='status'){return (av||'').localeCompare(bv||'')*dir;}if(av==null)av=-Infinity;if(bv==null)bv=-Infinity;return (av-bv)*dir;});
+  $('#count').textContent=out.length+' of '+stocks.length+' stocks';
+  $('#tbody').innerHTML=out.length?out.map((s,i)=>{
+    const st=s.status==='ACTIVE'?'<span class="tag g">ACTIVE</span>':(s.status==='BOX READY'?'<span class="tag a">BOX READY</span>':'<span class="tag">FORMING</span>');
+    return `<tr data-i="${i}">
+      <td class="l"><div class="cname">${s.name}</div><div class="csym">${s.symbol}</div></td>
+      <td class="l"><div class="sect" title="${s.sector}">${s.sector}</div></td>
+      <td>${fmt(s.price,0)}</td>
+      <td class="l">${st}</td>
+      <td>${fmt(s.boxTop,0)}</td>
+      <td>${fmt(s.boxBottom,0)}</td>
+      <td class="chip">${fmt(s.heightPct,1)}%</td>
+      <td class="${s.currentSL!=null?'pass':''}">${fmt(s.currentSL,0)}</td>
+      <td>${fmt(s.target,0)}</td>
+      <td class="${s.riskPct>12?'fail':''}">${fmt(s.riskPct,1)}%</td>
+      <td class="${s.upside>0?'pass':''}">${pct(s.upside,1)}</td>
+      <td class="${s.rs3m>0?'pass':'fail'}">${pct(s.rs3m,1)}</td>
+      <td>${pct(s.nearHigh,1)}</td>
+      <td>${s.signalCount}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="14" class="empty">No stocks match the filters</td></tr>';
+  $$('#tbody tr[data-i]').forEach(tr=>tr.addEventListener('click',()=>{
+    const nx=tr.nextElementSibling;if(nx&&nx.classList.contains('detail')){nx.remove();tr.classList.remove('open');return;}
+    $$('#tbody .detail').forEach(x=>x.remove());$$('#tbody tr[data-i]').forEach(x=>x.classList.remove('open'));
+    const s=out[+tr.dataset.i];tr.classList.add('open');
+    const d=document.createElement('tr');d.className='detail';
+    d.innerHTML=`<td colspan="14">${detail(s)}</td>`;tr.after(d);
+  }));
+}
+function detail(s){
+  const sigs=(s.signals||[]).map(x=>{
+    const val=x.price!=null?x.price:(x.newSL!=null?x.newSL:null);
+    const col=x.type==='BUY'?'var(--green)':x.type==='EXIT'?'var(--red)':'var(--amber)';
+    return `<div class="rline"><span>${x.date} · <b style="color:${col}">${x.type}</b></span><span>₹${fmt(val,0)}${x.protectedProfit!=null?' (protected +'+fmt(x.protectedProfit,0)+')':''}</span></div>`;
+  }).join('')||'<div class="rline">No signals yet</div>';
+  const box=s.activeBox||{};
+  return `<div class="dinner">
+    <div class="dcol"><h4>Active box</h4>
+      <div class="rline"><span>Box top (breakout)</span><b>₹${fmt(box.top,0)}</b></div>
+      <div class="rline"><span>Box bottom (support)</span><b>₹${fmt(box.bottom,0)}</b></div>
+      <div class="rline"><span>Box height</span><b>₹${fmt(box.height,0)} (${fmt(box.heightPct,1)}%)</b></div>
+      <div class="rline"><span>Confirmed on</span><b>${s.boxDate||'—'}</b></div>
+      <div class="rline"><span>Total boxes found</span><b>${s.boxCount}</b></div>
+      <div class="rline"><span>Current price</span><b>₹${fmt(s.price,0)}</b></div>
+    </div>
+    <div class="dcol"><h4>Trade parameters</h4>
+      <div class="rline"><span>Status</span><b>${s.status}</b></div>
+      <div class="rline"><span>Entry (last BUY)</span><b>₹${fmt(s.lastBuy?.price,0)}</b></div>
+      <div class="rline"><span>Current stop</span><b>₹${fmt(s.currentSL,0)}</b></div>
+      <div class="rline"><span>Target (box top + height)</span><b>₹${fmt(s.target,0)}</b></div>
+      <div class="rline"><span>Risk from current price</span><b>${fmt(s.riskPct,1)}%</b></div>
+      <div class="rline"><span>Upside to target</span><b>${pct(s.upside,1)}</b></div>
+      <div class="rline"><span>Trailing stop raised</span><b>${s.lastSL?'₹'+fmt(s.lastSL.newSL,0):'No'}</b></div>
+    </div>
+    <div class="dcol"><h4>Signal timeline (latest)</h4>${sigs}
+      <h4 style="margin-top:16px">Filters</h4>
+      <div class="rline"><span>Above 200 DMA</span><b>${s.above200?'Yes':'No'}</b></div>
+      <div class="rline"><span>50 DMA &gt; 200 DMA</span><b>${s.dma50above200?'Yes':'No'}</b></div>
+      <div class="rline"><span>RS 3M vs Nifty</span><b>${pct(s.rs3m,1)}</b></div>
+    </div>
+  </div>`;
+}
+function calc(){
+  const cap=+$('#capital').value||0,risk=+$('#riskpct').value||0,entry=+$('#entry').value||0,sl=+$('#sl').value||0;
+  const rps=entry-sl,max=cap*risk/100,qty=rps>0?Math.floor(max/rps):0,inv=qty*entry,pctv=entry?rps/entry*100:0;
+  $('#oRisk').textContent='₹'+rps.toFixed(2);$('#oMax').textContent='₹'+max.toFixed(0);
+  $('#oQty').textContent=qty;$('#oInv').textContent='₹'+inv.toLocaleString('en-IN');$('#oPct').textContent=pctv.toFixed(2)+'%';
+}
+$('#calcBtn').addEventListener('click',calc);calc();
+$('#export').addEventListener('click',()=>{
+  const cols=['name','symbol','sector','price','status','boxTop','boxBottom','heightPct','currentSL','target','riskPct','upside','rs3m','signalCount'];
+  const rows=[cols.join(',')];for(const s of stocks)rows.push(cols.map(c=>{let v=s[c];if(v==null)return'';if(typeof v==='string')return'"'+v.replace(/"/g,'""')+'"';return v;}).join(','));
+  const b=new Blob([rows.join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='darvas_scan_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+});
+$('#method').innerHTML=`<h3>Darvas Box — system rules (from the reference guide)</h3><div class="grid">
+  <div class="box"><h4>1 · Box identification</h4><ul><li>Candidate high confirmed after 3 sessions with no higher high</li><li>Candidate low confirmed after 3 sessions with no lower low</li><li>Top and bottom confirmed at different times (no look-ahead)</li></ul></div>
+  <div class="box"><h4>2 · Entry</h4><ul><li>Daily close above confirmed box top</li><li>Volume ≥ 1.5× 20-day average</li><li>Prefer above 50 & 200 DMA, near 52W high</li></ul></div>
+  <div class="box"><h4>3 · Stop &amp; risk</h4><ul><li>Initial SL = box bottom − 0.4% buffer</li><li>Max box height 15%, max risk 12%</li><li>Position size = 1% capital / risk per share</li></ul></div>
+  <div class="box"><h4>4 · Trailing &amp; exit</h4><ul><li>Move stop only after a new HIGHER box confirms its bottom</li><li>Never lower the stop</li><li>Exit when stop is hit; no averaging down</li></ul></div>
+</div><p>These are the recommended starting parameters. Backtest pure Darvas, then +volume, +DMA, +RS, +ATR buffer, ghost-box and controlled pyramiding independently before using live capital.</p>`;
+
+render();
+</script>
+</body>
+</html>
