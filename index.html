@@ -144,7 +144,7 @@
         <th data-key="riskPct">Risk %</th>
         <th data-key="upside">Upside</th>
         <th data-key="volRatio" title="Breakout-day volume / 20-day average">Vol Ratio</th>
-        <th data-key="closeAbove" title="Breakout close above confirmed box top">Close&gt;Top</th>
+        <th data-key="closeAbove" title="Latest closing price above the current box top">Close&gt;Top</th>
         <th data-key="dma50SlopePct" title="50 DMA change over last 10 sessions">50 DMA Slope</th>
         <th data-key="rs3m">RS 3M</th>
         <th data-key="nearHigh">52W High</th>
@@ -173,7 +173,7 @@ const stocks = DATA.stocks.map(s => {
     riskPct: (sl != null && s.price) ? (s.price - sl) / s.price * 100 : null,
     upside: (target != null && s.price) ? (target / s.price - 1) * 100 : null,
     volRatio: s.lastBuy?.volumeRatio ?? null,
-    closeAbove: (s.lastBuy && s.lastBuy.boxTop != null) ? (s.lastBuy.price > s.lastBuy.boxTop) : null,
+    closeAbove: (s.price != null && box.top != null) ? (s.price > box.top) : null,
     signalCount: s.signals?.length || 0, active,
   };
 });
@@ -265,7 +265,7 @@ function detail(s){
       <div class="rline"><span>Risk from current price</span><b>${fmt(s.riskPct,1)}%</b></div>
       <div class="rline"><span>Upside to target</span><b>${pct(s.upside,1)}</b></div>
       <div class="rline"><span>Volume ratio (breakout)</span><b class="${s.volRatio>=1.5?'pass':'fail'}">${s.volRatio!=null?s.volRatio.toFixed(2)+'× (min 1.5×)':'—'}</b></div>
-      <div class="rline"><span>Close above box top</span><b class="${s.closeAbove===true?'pass':'fail'}">${s.closeAbove==null?'—':(s.closeAbove?'Yes ✓':'No')}</b></div>
+      <div class="rline"><span>Latest close above box top</span><b class="${s.closeAbove===true?'pass':'fail'}">${s.closeAbove==null?'—':(s.closeAbove?'Yes ✓':'No')}</b></div>
       <div class="rline"><span>50 DMA slope (10 sessions)</span><b class="${s.dma50SlopeUp===true?'pass':(s.dma50SlopeUp===false?'fail':'')}">${s.dma50SlopePct==null?'—':pct(s.dma50SlopePct,1)+(s.dma50SlopeUp?' ↑':' ↓')}</b></div>
       <div class="rline"><span>Trailing stop raised</span><b>${s.lastSL?'₹'+fmt(s.lastSL.newSL,0):'No'}</b></div>
     </div>
