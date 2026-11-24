@@ -1,0 +1,13 @@
+{
+  "name": "darvas-box-strategy",
+  "version": "1.0.0",
+  "description": "Rule-based Darvas Box breakout scanner for NIFTY universe",
+  "main": "lib/box-detector.js",
+  "scripts": {
+    "test": "node test.js",
+    "scan": "node fetch-darvas.js --index=250",
+    "build": "node build.js",
+    "refresh": "node fetch-darvas.js --index=250 && node build.js"
+  },
+  "license": "ISC"
+}
