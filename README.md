@@ -2,7 +2,7 @@
 
 A rule-based NIFTY universe scanner implementing the classical **Darvas Box** breakout method, with chronological (no look-ahead) box detection, volume-confirmed entries, trailing stops, position sizing, and a self-contained web dashboard.
 
-**Universe:** NIFTY 250 = official NSE NIFTY 200 list + next 50 by market cap from NIFTY 500 (no official NIFTY 250 exists). Validated: 200/200 NIFTY 200 stocks included (incl. SBI), all from NIFTY 500, zero duplicates.
+**Universe:** Full **NIFTY 500** (default). The scanner uses the official NSE constituent list, copied into the repo as `ind_nifty500list.csv` (identical to the file at niftyindices.com / NSE archives). 501 symbols; 499 scanned (2 recent listings lack 60 days of history). Includes SBI, 360ONE, ECLERX, etc. To use another universe: `--index=200` or `--index=250`.
 
 ## Live dashboard
 After deployment: `https://kumarkaushaliimu.github.io/darvas-box-strategy/`
@@ -30,7 +30,7 @@ After deployment: `https://kumarkaushaliimu.github.io/darvas-box-strategy/`
 ```bash
 npm install           # no runtime deps for the engine; uses Node 18+ global fetch
 node test.js                               # verify detector on worked example
-node fetch-darvas.js --index=250           # full universe scan → darvas.json
+node fetch-darvas.js --index=500           # full NIFTY 500 scan → darvas.json
 node build.js                              # → index.html
 ```
 
