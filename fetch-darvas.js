@@ -1,6 +1,6 @@
 /**
  * Darvas Box Scanner — NIFTY universe daily data fetch + screening.
- * Usage: node fetch-darvas.js [--limit=50] [--index=250]
+ * Usage: node fetch-darvas.js [--limit=50] [--index=500]
  * Output: darvas.json
  */
 const fs = require('fs');
@@ -8,7 +8,7 @@ const { detectBoxes } = require('./lib/box-detector');
 
 const args = process.argv.slice(2);
 const LIMIT = parseInt((args.find(a => a.startsWith('--limit=')) || '').split('=')[1] || '0', 10);
-const INDEX = (args.find(a => a.startsWith('--index=')) || '').split('=')[1] || '250';
+const INDEX = (args.find(a => a.startsWith('--index=')) || '').split('=')[1] || '500';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 const YH = { 'User-Agent': UA, 'Accept': 'application/json,text/plain,*/*' };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -60,17 +60,22 @@ function emaSeries(vals, p) {
     return m ? { name: m[1].trim(), sector: m[2].trim(), symbol: m[3].trim() } : null;
   }).filter(Boolean);
 
-  const csv500 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty500list.csv', { headers: { 'User-Agent': UA } })).text();
+  let csv500;
+  const localCsv = 'ind_nifty500list.csv';
+  if (fs.existsSync(localCsv)) {
+    csv500 = fs.readFileSync(localCsv, 'utf8');
+    console.log('Using local constituents file: ' + localCsv);
+  } else {
+    csv500 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty500list.csv', { headers: { 'User-Agent': UA } })).text();
+  }
   const all500 = parseCsv(csv500);
   let list;
 
   if (INDEX === '200') {
     const csv200 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty200list.csv', { headers: { 'User-Agent': UA } })).text();
     list = parseCsv(csv200);
-  } else {
-    // NIFTY 250 has no official NSE list. Build it as: official NIFTY 200 + next
-    // 50 largest by market cap from the rest of NIFTY 500. This guarantees all
-    // NIFTY 200 names (incl. SBIN) are present, unlike slicing the alphabetical CSV.
+  } else if (INDEX === '250') {
+    // Legacy: official NIFTY 200 + next 50 by market cap
     const csv200 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty200list.csv', { headers: { 'User-Agent': UA } })).text();
     const n200 = parseCsv(csv200);
     const in200 = new Set(n200.map(c => c.symbol));
@@ -81,14 +86,16 @@ function emaSeries(vals, p) {
       const batch = others.slice(i, i + 40);
       const syms = batch.map(c => encodeURIComponent(c.symbol) + '.NS').join(',');
       const j = await getJson('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms + '&crumb=' + encodeURIComponent(session.crumb));
-      for (const q of (j?.quoteResponse?.result || [])) {
-        caps[decodeURIComponent(q.symbol.replace(/\.NS$/, ''))] = q.marketCap || 0;
-      }
+      for (const q of (j?.quoteResponse?.result || [])) caps[decodeURIComponent(q.symbol.replace(/\.NS$/, ''))] = q.marketCap || 0;
       await sleep(150);
     }
     others.sort((a, b) => (caps[b.symbol] || 0) - (caps[a.symbol] || 0));
     list = [...n200, ...others.slice(0, 50)];
     console.log('Universe: official NIFTY 200 + top 50 by market cap = ' + list.length);
+  } else {
+    // Full NIFTY 500 (default) — every constituent from the official NSE list
+    list = all500;
+    console.log('Universe: full NIFTY 500 = ' + list.length + ' stocks');
   }
   if (LIMIT) list = list.slice(0, LIMIT);
 

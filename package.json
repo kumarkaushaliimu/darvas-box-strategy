@@ -5,9 +5,9 @@
   "main": "lib/box-detector.js",
   "scripts": {
     "test": "node test.js",
-    "scan": "node fetch-darvas.js --index=250",
+    "scan": "node fetch-darvas.js --index=500",
     "build": "node build.js",
-    "refresh": "node fetch-darvas.js --index=250 && node build.js"
+    "refresh": "node fetch-darvas.js --index=500 && node build.js"
   },
   "license": "ISC"
 }
