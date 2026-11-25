@@ -55,15 +55,44 @@ function emaSeries(vals, p) {
 
 (async () => {
   console.log('Fetching NIFTY ' + INDEX + ' constituents...');
-  // Use 500 list and filter to top 250 by market cap if index=250 (no official NIFTY250 list)
-  const csv = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty500list.csv', { headers: { 'User-Agent': UA } })).text();
-  let list = csv.trim().split(/\r?\n/).slice(1).map(line => {
+  const parseCsv = txt => txt.trim().split(/\r?\n/).slice(1).map(line => {
     const m = line.match(/^(.*),([^,]*),([^,]*),([^,]*),([^,]*)$/);
     return m ? { name: m[1].trim(), sector: m[2].trim(), symbol: m[3].trim() } : null;
   }).filter(Boolean);
+
+  const csv500 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty500list.csv', { headers: { 'User-Agent': UA } })).text();
+  const all500 = parseCsv(csv500);
+  let list;
+
+  if (INDEX === '200') {
+    const csv200 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty200list.csv', { headers: { 'User-Agent': UA } })).text();
+    list = parseCsv(csv200);
+  } else {
+    // NIFTY 250 has no official NSE list. Build it as: official NIFTY 200 + next
+    // 50 largest by market cap from the rest of NIFTY 500. This guarantees all
+    // NIFTY 200 names (incl. SBIN) are present, unlike slicing the alphabetical CSV.
+    const csv200 = await (await fetch('https://archives.nseindia.com/content/indices/ind_nifty200list.csv', { headers: { 'User-Agent': UA } })).text();
+    const n200 = parseCsv(csv200);
+    const in200 = new Set(n200.map(c => c.symbol));
+    const others = all500.filter(c => !in200.has(c.symbol));
+    await yahooSession();
+    const caps = {};
+    for (let i = 0; i < others.length; i += 40) {
+      const batch = others.slice(i, i + 40);
+      const syms = batch.map(c => encodeURIComponent(c.symbol) + '.NS').join(',');
+      const j = await getJson('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + syms + '&crumb=' + encodeURIComponent(session.crumb));
+      for (const q of (j?.quoteResponse?.result || [])) {
+        caps[decodeURIComponent(q.symbol.replace(/\.NS$/, ''))] = q.marketCap || 0;
+      }
+      await sleep(150);
+    }
+    others.sort((a, b) => (caps[b.symbol] || 0) - (caps[a.symbol] || 0));
+    list = [...n200, ...others.slice(0, 50)];
+    console.log('Universe: official NIFTY 200 + top 50 by market cap = ' + list.length);
+  }
   if (LIMIT) list = list.slice(0, LIMIT);
 
-  await yahooSession();
+  if (!session) await yahooSession();
 
   // Benchmark (NIFTY 500 index) for relative strength
   const idx = await getJson('https://query1.finance.yahoo.com/v8/finance/chart/%5ECRSLDX?range=1y&interval=1d');
@@ -166,9 +195,8 @@ function emaSeries(vals, p) {
     await sleep(50);
   }
 
-  // If index=250, keep top 250 by price-based liquidity proxy (volume unavailable cheaply) -> use all 500 list but trim
-  let outList = results;
-  if (INDEX === '250' && results.length > 250) outList = results.slice(0, 250);
+  // Universe already reduced to the correct 250 (by market cap) at the top of the script.
+  const outList = results;
 
   const out = {
     title: 'Darvas Box Scanner',

@@ -2,6 +2,8 @@
 
 A rule-based NIFTY universe scanner implementing the classical **Darvas Box** breakout method, with chronological (no look-ahead) box detection, volume-confirmed entries, trailing stops, position sizing, and a self-contained web dashboard.
 
+**Universe:** NIFTY 250 = official NSE NIFTY 200 list + next 50 by market cap from NIFTY 500 (no official NIFTY 250 exists). Validated: 200/200 NIFTY 200 stocks included (incl. SBI), all from NIFTY 500, zero duplicates.
+
 ## Live dashboard
 After deployment: `https://kumarkaushaliimu.github.io/darvas-box-strategy/`
 
