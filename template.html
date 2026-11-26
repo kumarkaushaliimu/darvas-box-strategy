@@ -139,7 +139,7 @@
       <button data-f="active">Active breakout</button>
       <button data-f="box">Confirmed box</button>
       <button data-f="trend">Trend-aligned</button>
-      <button data-f="recent">Recent signals</button>
+      <button data-f="recent" title="ACTIVE stocks with a BUY or RAISE_SL signal in the last 14 days">Recent (14d)</button>
     </div>
     <button class="btn" id="export">⬇ Export CSV</button>
     <span class="count" id="count"></span>
@@ -169,6 +169,7 @@
         <th data-key="dma50SlopePct" title="50 DMA change over last 10 sessions">50 DMA Slope</th>
         <th data-key="rs3m">RS 3M</th>
         <th data-key="nearHigh">52W High</th>
+        <th data-key="recentSignal" title="BUY or RAISE_SL in last 14 days">Recent 14d</th>
         <th data-key="signalCount">Signals</th>
       </tr></thead>
       <tbody id="tbody"></tbody>
@@ -244,6 +245,11 @@ const stocks = DATA.stocks.map(s => {
     volRatio: s.lastBuy?.volumeRatio ?? null,
     closeAbove: (s.price != null && box.top != null) ? (s.price > box.top) : null,
     signalCount: s.signals?.length || 0, active,
+    // BUY or RAISE_SL within the last 14 days (relative to scan date, not browser clock)
+    recentSignal: (s.signals || []).some(x =>
+      (x.type === 'BUY' || x.type === 'RAISE_SL') &&
+      new Date(x.date).getTime() >= new Date(DATA.generatedAt).getTime() - 14 * 86400000
+    ),
   };
 });
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -276,7 +282,7 @@ function render(){
   if(state.filter==='active')out=out.filter(s=>s.active);
   else if(state.filter==='box')out=out.filter(s=>s.status==='BOX READY');
   else if(state.filter==='trend')out=out.filter(s=>s.above200&&s.dma50above200);
-  else if(state.filter==='recent')out=out.filter(s=>s.signalCount>0);
+  else if(state.filter==='recent')out=out.filter(s=>s.active && s.recentSignal);
   const k=state.key,dir=state.dir;
   out.sort((a,b)=>{let av=a[k],bv=b[k];if(k==='name'||k==='sector'||k==='status'){return (av||'').localeCompare(bv||'')*dir;}if(av==null)av=-Infinity;if(bv==null)bv=-Infinity;return (av-bv)*dir;});
   $('#count').textContent=out.length+' of '+stocks.length+' stocks';
@@ -299,15 +305,16 @@ function render(){
       <td class="${s.dma50SlopeUp===true?'pass':(s.dma50SlopeUp===false?'fail':'neutral')}">${s.dma50SlopePct==null?'—':pct(s.dma50SlopePct,1)}</td>
       <td class="${s.rs3m>0?'pass':'fail'}">${pct(s.rs3m,1)}</td>
       <td>${pct(s.nearHigh,1)}</td>
+      <td class="${s.recentSignal?'pass':'neutral'}">${s.recentSignal?'Yes':'No'}</td>
       <td>${s.signalCount}</td>
     </tr>`;
-  }).join(''):'<tr><td colspan="17" class="empty">No stocks match the filters</td></tr>';
+  }).join(''):'<tr><td colspan="18" class="empty">No stocks match the filters</td></tr>';
   $$('#tbody tr[data-i]').forEach(tr=>tr.addEventListener('click',()=>{
     const nx=tr.nextElementSibling;if(nx&&nx.classList.contains('detail')){nx.remove();tr.classList.remove('open');return;}
     $$('#tbody .detail').forEach(x=>x.remove());$$('#tbody tr[data-i]').forEach(x=>x.classList.remove('open'));
     const s=out[+tr.dataset.i];tr.classList.add('open');
     const d=document.createElement('tr');d.className='detail';
-    d.innerHTML=`<td colspan="17">${detail(s)}</td>`;tr.after(d);
+    d.innerHTML=`<td colspan="18">${detail(s)}</td>`;tr.after(d);
   }));
 }
 function detail(s){
