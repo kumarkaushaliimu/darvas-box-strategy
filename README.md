@@ -42,6 +42,8 @@ node build.js                              # → index.html
 - Expandable rows showing the full signal timeline (BUY → RAISE_SL → EXIT) and trade parameters
 - CSV export
 
+**All Stocks filters:** `Recent (14d)` shows only **ACTIVE** stocks that had a **BUY or RAISE_SL signal within the last 14 days** (27 of 499 in the latest scan). This is a subset of `Active breakout` — it isolates stocks with a fresh entry or a freshly raised stop. A "Recent 14d" column marks qualifying stocks. Note: 4 stocks had a recent signal but are no longer ACTIVE (they hit their stop afterwards) and are correctly excluded.
+
 ### Recommended Buys tab
 A second tab showing only stocks that pass **all 8 hard filters**: active BUY signal, signal age ≤14 days, risk ≤12%, upside ≥1.5× risk, breakout volume ≥1.5×, 50 DMA slope positive, price above 200 DMA, and RS positive vs Nifty. Each is ranked by a **Buy Score /100** (freshness 30, low risk 25, reward/risk 20, volume 15, above box top 10). Expandable rows show which filters passed and the score breakdown. Includes CSV export and a methodology panel. "Close above box top" is only a 10-point confidence bonus — not a hard filter.
 
